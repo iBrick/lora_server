@@ -1,12 +1,19 @@
-package net;
+package socket;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
+import java.util.HashMap;
+
+import dao.DataBaseAction;
+import endnodes.Info;
+import util.ParseJson;
+
 
 public class Socket_Server implements Runnable {
+	private HashMap<String, Info> InfoMap = new HashMap();
 	private int port;
 	private DatagramSocket dsock;
 	private InetSocketAddress socketAddress = null;
@@ -15,7 +22,7 @@ public class Socket_Server implements Runnable {
 	private static final int PKT_PULL_DATA = 0x02;
 	private static final int PKT_PULL_RESP = 0x03;
 	private static final int PKT_PULL_ACK = 0x04;
-	private byte ack_command = 4;
+	private byte ack_command;
 	public Socket_Server(int port){
 		this.port = port;
 		this.socketAddress = new InetSocketAddress("127.0.0.1", this.port);
@@ -54,11 +61,15 @@ public class Socket_Server implements Runnable {
 				case PKT_PUSH_DATA:
 					System.out.println("收到了PUSH_DATA");
 					System.out.println(recv_info);
+					InfoMap = ParseJson.parseOfJson(recv_info);
+					DataBaseAction.SaveData(InfoMap);
 					ack_command = PKT_PUSH_ACK;
 					break;
 				case PKT_PULL_DATA:
 					System.out.println("收到了PULL_DATA");
 					System.out.println(recv_info);
+					InfoMap = ParseJson.parseOfJson(recv_info);
+					DataBaseAction.SaveData(InfoMap);
 					ack_command = PKT_PULL_ACK;
 					break;
 				default:
@@ -67,13 +78,13 @@ public class Socket_Server implements Runnable {
 				
 				buffer[3] = ack_command;
 				DatagramPacket send_pkt = new DatagramPacket(
-						buffer, recv_pkt.getLength(),
+						buffer, 4,
 						recv_pkt.getAddress(), recv_pkt.getPort());
 				dsock.send(send_pkt);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			
+		//	break;
 		}
 		
 	}
